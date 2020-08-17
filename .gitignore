@@ -4,3 +4,5 @@ debug.log
 design.txt
 *.csv
 *.json
+.DS_Store
+chromedriver

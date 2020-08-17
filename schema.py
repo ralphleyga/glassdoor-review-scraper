@@ -19,3 +19,10 @@ SCHEMA = [
     'positive_outlook',
     'approves_of_CEO'
 ]
+
+# SCHEMA = [
+#     'date',
+#     'reviewLink',
+#     'authorJobTitle',
+#     'v2__EIReviewsRatingsStylesV2__ratingNum'
+# ]

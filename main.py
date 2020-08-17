@@ -120,8 +120,11 @@ def scrape(field, review, author):
     def scrape_emp_title(review):
         if 'Anonymous Employee' not in review.text:
             try:
-                res = author.find_element_by_class_name(
-                    'authorJobTitle').text.split('-')[1]
+                text = author.find_element_by_class_name('authorJobTitle').text
+                if '-' in text:
+                    res = text.split('-')[1]
+                else:
+                    res = text
             except Exception:
                 logger.warning('Failed to scrape employee_title')
                 res = np.nan
@@ -152,7 +155,7 @@ def scrape(field, review, author):
         return review.find_element_by_class_name('summary').text.strip('"')
 
     def scrape_years(review):
-        res = review.find_element_by_class_name('common__EiReviewTextStyles__allowLineBreaks').find_element_by_xpath('preceding-sibling::p').text
+        res = review.find_element_by_class_name('v2__EIReviewDetailsV2__fullWidth ').find_element_by_xpath('preceding-sibling::p').text
         return res
 
     def scrape_helpful(review):
@@ -173,7 +176,7 @@ def scrape(field, review, author):
 
     def scrape_pros(review):
         try:
-            pros = review.find_element_by_class_name('common__EiReviewTextStyles__allowLineBreaks')
+            pros = review.find_element_by_class_name('v2__EIReviewDetailsV2__fullWidth ')
             expand_show_more(pros)
             res = pros.text.replace('Pros', '')
             res = res.strip()
@@ -183,7 +186,7 @@ def scrape(field, review, author):
 
     def scrape_cons(review):
         try:
-            cons = review.find_elements_by_class_name('common__EiReviewTextStyles__allowLineBreaks')[1]
+            cons = review.find_elements_by_class_name('v2__EIReviewDetailsV2__fullWidth ')[1]
             expand_show_more(cons)
             res = cons.text.replace('Cons', '')
             res = res.strip()
@@ -193,7 +196,7 @@ def scrape(field, review, author):
 
     def scrape_advice(review):
         try:
-            advice = review.find_elements_by_class_name('common__EiReviewTextStyles__allowLineBreaks')[2]
+            advice = review.find_elements_by_class_name('v2__EIReviewDetailsV2__fullWidth ')[2]
             res = advice.text.replace('Advice to Management', '')
             res = res.strip()
         except Exception:
@@ -312,7 +315,6 @@ def extract_from_page():
     def extract_review(review):
         author = review.find_element_by_class_name('authorInfo')
         res = {}
-        # import pdb;pdb.set_trace()
         for field in SCHEMA:
             res[field] = scrape(field, review, author)
 
@@ -324,24 +326,23 @@ def extract_from_page():
     res = pd.DataFrame([], columns=SCHEMA)
 
     reviews = browser.find_elements_by_class_name('empReview')
+
     logger.info(f'Found {len(reviews)} reviews on page {page[0]}')
 
     for review in reviews:
         if not is_featured(review):
             data = extract_review(review)
-            logger.info(f'Scraped data for "{data["review_title"]}"\
-({data["date"]})')
             res.loc[idx[0]] = data
         else:
             logger.info('Discarding a featured review')
         idx[0] = idx[0] + 1
 
-    if args.max_date and \
-        (pd.to_datetime(res['date']).max() > args.max_date) or \
-            args.min_date and \
-            (pd.to_datetime(res['date']).min() < args.min_date):
-        logger.info('Date limit reached, ending process')
-        date_limit_reached[0] = True
+    try:
+        if args.max_date and (pd.to_datetime(res['date']).max() > args.max_date) or args.min_date and (pd.to_datetime(res['date']).min() < args.min_date):
+            logger.info('Date limit reached, ending process')
+            date_limit_reached[0] = True
+    except Exception:
+        pass
 
     return res
 
@@ -397,8 +398,6 @@ def sign_in():
     url = 'https://www.glassdoor.com/profile/login_input.htm'
     browser.get(url)
 
-    # import pdb;pdb.set_trace()
-
     email_field = browser.find_element_by_name('username')
     password_field = browser.find_element_by_name('password')
     submit_btn = browser.find_element_by_xpath('//button[@type="submit"]')
@@ -424,12 +423,10 @@ def get_browser():
 
 def get_current_page():
     logger.info('Getting current page number')
-    paging_control = browser.find_element_by_class_name('pagingControls')
+    paging_control = browser.find_element_by_class_name('pagination__PaginationStyle__current')
     current = int(paging_control.find_element_by_xpath(
         '//ul//li[contains\
-        (concat(\' \',normalize-space(@class),\' \'),\' current \')]\
-        //span[contains(concat(\' \',\
-        normalize-space(@class),\' \'),\' disabled \')]')
+        (concat(\' \',normalize-space(@class),\' \'),\' pagination__PaginationStyle__page \')]')
         .text.replace(',', ''))
     return current
 
