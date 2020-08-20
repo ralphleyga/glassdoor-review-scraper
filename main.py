@@ -205,10 +205,7 @@ def scrape(field, review, author):
 
     def scrape_overall_rating(review):
         try:
-            ratings = review.find_element_by_class_name('gdStars')
-            overall = ratings.find_element_by_class_name(
-                'rating').find_element_by_class_name('value-title')
-            res = overall.get_attribute('title')
+            res = review.find_element_by_class_name('gdStars').text.split('\n')[0]
         except Exception:
             res = np.nan
         return res
